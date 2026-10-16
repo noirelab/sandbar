@@ -1,0 +1,13 @@
+[project]
+name = "sandbar"
+version = "0.1.0"
+description = "River sandbar segmentation from Sentinel-2 imagery"
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.4",
+    "odc-stac>=0.5.3",
+    "planetary-computer>=1.0.0",
+    "pystac-client>=0.9.0",
+    "scipy>=1.18.1",
+]
