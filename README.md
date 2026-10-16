@@ -1,15 +1,56 @@
 # sandbar
 
-Segmentation of exposed river sandbars in Sentinel-2 imagery, trained on weak labels from spectral indices and compared against a spectral baseline.
+An agent that answers questions about river drought on the Araguaia from Sentinel-2 satellite imagery, with an eval that measures whether its answers are right.
 
-**Status:** early exploration. The data pipeline and spectral baseline work; no model trained yet.
+Ask "how much riverbed was exposed at Aruanã in September 2024 compared to 2023?" and the LLM plans the measurements, calls a segmentation model on the right scenes, does the arithmetic and cites the scene dates. Exposed sand grows as the river drops, so it is a proxy for drought; 2023 and 2024 brought record droughts to the Araguaia-Tocantins basin.
+
+**Status:** data pipeline, spectral baseline, weak-label dataset, agent tools, agent and eval harness are written. The U-Net is training; the eval has not been run against the API yet.
+
+## Why the eval is the point
+
+Most agent demos cannot show that their answers are correct. Here every answer can be computed without the LLM: the eval and the agent read the same deterministic measurement function, so the ground truth is exact and grading is automatic. The eval measures planning, tool use and arithmetic per model and effort level, along with cost and latency per question.
+
+What it does not measure: whether the segmentation itself is accurate. That needs a hand-labeled test set (see the plan).
 
 ## Plan
 
-1. Data access and spectral baseline on one area of interest (done).
-2. Weak-label dataset: image tiles with masks generated from spectral indices.
-3. Train a segmentation model (U-Net / SegFormer), hand-label a small test set and compare IoU against the baseline.
-4. Time-series demo: interactive map showing sandbars appearing and disappearing across the dry season.
+1. Data access and spectral baseline (done).
+2. Weak-label dataset: 256 x 256 tiles from 8 reaches over 1,000 km of the Araguaia, July and September 2023-2026, masks from the spectral rule (done).
+3. U-Net trained on the weak labels; Aruanã held out for testing, São Félix for validation (training).
+4. Agent tools: list reaches, measure sand and water area for a reach and month with the U-Net or the rule, cached scenes (done).
+5. Agent: DeepSeek (OpenAI-compatible API) with function calling and a hand-written tool loop (done).
+6. Eval: questions generated from the measurement cache with exact answers, including unanswerable cases; reports accuracy, tool calls, cost and latency per model and effort (harness done, results pending).
+   Models: `deepseek-flash` and `deepseek-v4-pro`, thinking off and at each effort. A local open-weight model through Ollama is the next comparison point (free, runs on the 16 GB GPU).
+7. Hand-labeled test set on Aruanã, labeled with SAM, to compare U-Net and rule IoU against real ground truth.
+8. River-level validation: correlate measured sand area with ANA gauge readings for the same dates.
+9. Web app: chat with a map and a timeline of sand area per reach, with visible tool traces, deployed publicly.
+10. Comparison of vision-language models, zero-shot, against the U-Net on the hand-labeled set.
+
+## Agent
+
+```sh
+uv run tools.py                                   # fill the scene cache (about 2 min per scene)
+uv run agent.py "Qual trecho secou mais em setembro de 2024?" [model] [effort]   # effort: low | medium | high | off
+```
+
+Tools (`tools.py`, wrapped in `agent.py`):
+
+- `list_reaches`: the 8 reaches, ordered from upstream to downstream.
+- `measure(reach, year, month, method)`: exposed sand and water in km², from the least cloudy scene of the month; `method` is `unet` (default) or `baseline`.
+- `answer(value)`: records the bare final answer, so the eval can grade it.
+
+DeepSeek thinking mode is on by default; with tools, the API requires each assistant message's `reasoning_content` to be sent back on later requests, so the loop appends whole messages. Costs use peak-hour prices, an upper bound (off-peak is half).
+
+Credentials: `DEEPSEEK_API_KEY`, or a file at `~/.config/deepseek/key` (`chmod 600`). Never commit or paste the key.
+
+## Eval
+
+```sh
+uv run eval.py build                              # writes eval/questions.jsonl
+uv run eval.py run deepseek-flash high 5        # first 5 questions; writes eval/results_<model>_<effort>.jsonl
+```
+
+Question types: one measurement, difference between years, seasonal growth in percent, ranking of reaches, year with most sand, basin total, U-Net vs rule gap, and unknown places that must get "no data". Numbers pass within 1% or the case's absolute tolerance. API failures are counted apart from wrong answers.
 
 ## Baseline
 
@@ -57,4 +98,4 @@ A wide river known for large dry-season beaches. The bars are clearly visible in
 
 ## Stack
 
-Python 3.12, uv, pystac-client, planetary-computer, odc-stac, NumPy, SciPy, Matplotlib.
+Python 3.12, uv, pystac-client, planetary-computer, odc-stac, NumPy, SciPy, Matplotlib, PyTorch, segmentation-models-pytorch, OpenAI Python SDK (against the DeepSeek API).
