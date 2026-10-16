@@ -44,7 +44,9 @@ def scene(reach, year, month):
         b = s2.load_day(items, item, bbox(reach))
         CACHE.mkdir(parents=True, exist_ok=True)
         bands = {k: v.astype("float16") for k, v in b.items()}
-        np.savez_compressed(path, date=str(item.datetime.date()), cloud=item.properties["eo:cloud_cover"], **bands)
+        tmp = path.with_suffix(".tmp.npz")  # write then rename, so a concurrent reader never sees half a file
+        np.savez_compressed(tmp, date=str(item.datetime.date()), cloud=item.properties["eo:cloud_cover"], **bands)
+        tmp.replace(path)
     d = np.load(path)
     return str(d["date"]), float(d["cloud"]), {k: d[k].astype("float32") for k in s2.BANDS}
 
