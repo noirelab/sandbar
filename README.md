@@ -44,8 +44,15 @@ The largest sand candidates in the 2021 drought (2021-09-07), when water levels 
 
 Sand on rivers like the Piquiri lies on the riverbed, under water, so optical imagery at 10 m cannot see it. Exposed-sandbar segmentation needs wide rivers with large seasonal bars, so the next area of interest is a river known for them.
 
+### Araguaia River at Aruanã, GO (2026-07-08)
+
+A wide river known for large dry-season beaches. The bars are clearly visible in RGB, and the baseline catches most of them, with some false positives on the town's riverfront. This is the study area going forward.
+
+![Araguaia baseline](docs/img/araguaia-aruana_2026-07-08.png)
+
 ## Notes
 
+- An area of interest can straddle Sentinel-2 tile edges; `explore.py` mosaics every tile from the chosen day.
 - Scenes processed with baseline 04.00 or later (from 2022 on) store reflectance with a +1000 offset; `explore.py` removes it before computing indices.
 
 ## Stack
