@@ -10,6 +10,7 @@ import json
 import os
 import sys
 import time
+from datetime import date
 from pathlib import Path
 
 from openai import OpenAI
@@ -19,15 +20,26 @@ import tools
 # USD per million tokens at peak hours (cache hit, cache miss, output); off-peak is half.
 PRICES = {"deepseek-flash": (0.006, 0.3, 1.2), "deepseek-v4-pro": (0.044, 1.32, 3.96)}
 MAX_STEPS = 30
+PROMPT = "v2"  # tags eval results, so prompt revisions can be compared
 
 SYSTEM = """You answer questions about exposed sand on the Araguaia River, Brazil, measured from \
 Sentinel-2 satellite imagery. Exposed sand grows as the river drops in the dry season (June to \
 October), so it is a proxy for drought.
 
 Use the tools for every number; never estimate from memory. A measurement covers one reach \
-(a ~20 x 18 km box) and one calendar month, using the least cloudy scene of that month. \
+(a ~20 x 18 km box) and one calendar month, using the clearest scene of that month that covers the reach. \
 `unet` is the trained segmentation model and the default; `baseline` is the hand-written spectral \
 rule. Use `baseline` only when the question asks for the rule or a comparison with it.
+
+Only the reaches from `list_reaches` can be measured, and each covers only its own box. A town \
+that names a reach (for example Aruanã for `aruana`) is that reach. Any other place, even a town \
+nearby, on another river, or with a similar name, has no data: never substitute the nearest reach.
+
+If a tool returns an error, retry the same call at most once. If the measurement still fails, \
+the answer is "no data"; never switch to another method unless the user asked for it.
+
+For averages, differences and comparisons, write the numbers and the calculation out before \
+deciding.
 
 When you know the answer, call `answer` once with the bare value: a number in the unit the \
 question implies (km2, percent), a reach name, or a year. If the data cannot answer the question \
@@ -78,13 +90,17 @@ def client():
     return _client
 
 
-def call_tool(name, args, trace, answers):
+def call_tool(name, args, trace, answers, broken={}):
     if name == "list_reaches":
         return tools.reaches()
     if name == "answer":
         answers.append(str(args.get("value")))
         return "recorded"
     if name == "measure":
+        if args.get("method", "unet") in broken:  # eval-only fault injection
+            result = {"error": broken[args.get("method", "unet")]}
+            trace.append({"tool": "measure", "input": args, "output": result})
+            return result
         try:
             result = tools.measure(args["reach"], int(args["year"]), int(args["month"]), args.get("method", "unet"))
         except (KeyError, ValueError) as e:
@@ -94,11 +110,11 @@ def call_tool(name, args, trace, answers):
     return {"error": f"unknown tool {name}"}
 
 
-def run(question, model="deepseek-flash", effort="high"):
+def run(question, model="deepseek-flash", effort="high", broken={}):
     """Answer one question; returns the answer, the tool trace, cost and latency."""
     thinking = {"thinking": {"type": "disabled"}} if effort == "off" else {"thinking": {"type": "enabled"}}
     effort_arg = {} if effort == "off" else {"reasoning_effort": effort}
-    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}]
+    messages = [{"role": "system", "content": f"{SYSTEM}\n\nToday's date is {date.today()}."}, {"role": "user", "content": question}]
     trace, answers = [], []
     hit = miss = out = calls = 0
     start = time.time()
@@ -120,7 +136,7 @@ def run(question, model="deepseek-flash", effort="high"):
             except json.JSONDecodeError:
                 result = {"error": "arguments were not valid JSON"}
             else:
-                result = call_tool(tc.function.name, args, trace, answers)
+                result = call_tool(tc.function.name, args, trace, answers, broken)
             messages.append({"role": "tool", "tool_call_id": tc.id, "content": json.dumps(result)})
     p_hit, p_miss, p_out = PRICES.get(model, (0, 0, 0))
     return {

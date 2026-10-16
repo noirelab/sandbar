@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "River sandbar segmentation from Sentinel-2 imagery"
 requires-python = ">=3.12"
 dependencies = [
+    "gradio>=6.30.0",
     "matplotlib>=3.11.2",
     "numpy>=2.5.4",
     "odc-stac>=0.5.3",

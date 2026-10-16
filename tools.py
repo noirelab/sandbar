@@ -42,8 +42,20 @@ def scene(reach, year, month):
         items = s2.search(bbox(reach), f"{year}-{month:02d}-01/{year}-{month:02d}-{last}")
         if not items:
             raise ValueError(f"no Sentinel-2 scene under 10% cloud for {reach} in {year}-{month:02d}")
-        item = min(items, key=lambda i: i.properties["eo:cloud_cover"])
-        b = s2.load_day(items, item, bbox(reach))
+        # The least cloudy tile can sit at the edge of an orbit swath and cover only part of
+        # the reach, so take the clearest day that covers at least 90% of it.
+        best, tried = None, set()
+        for item in sorted(items, key=lambda i: i.properties["eo:cloud_cover"]):
+            if item.datetime.date() in tried:
+                continue
+            tried.add(item.datetime.date())
+            b = s2.load_day(items, item, bbox(reach))
+            valid = float((~np.isnan(b["B04"])).mean())
+            if best is None or valid > best[2]:
+                best = (item, b, valid)
+            if valid >= 0.9:
+                break
+        item, b, _ = best
         CACHE.mkdir(parents=True, exist_ok=True)
         bands = {k: v.astype("float16") for k, v in b.items()}
         tmp = path.with_suffix(".tmp.npz")  # write then rename, so a concurrent reader never sees half a file

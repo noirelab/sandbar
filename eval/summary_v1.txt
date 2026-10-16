@@ -1,0 +1,62 @@
+deepseek-flash effort=off prompt=v1  n=90  correct 90%  wrong 5  no_answer 4  errors 0
+tool calls/question 5.6  cost/question $0.0010  median latency 6s  total $0.09
+  alias       8/8
+  diff        8/8
+  hectares    3/3
+  max_year    5/5
+  method_gap  6/6
+  multi_hop   4/4
+  no_data     4/4
+  no_scene    1/1
+  outside     2/4
+  outside_holdout 1/4
+  rainy       5/5
+  rank        3/3
+  season_pct  9/9
+  single      10/10
+  tool_failure 4/6
+  tool_failure_holdout 2/4
+  total       2/2
+  vague       4/4
+wrote eval/results_deepseek-flash_off_v1.jsonl
+deepseek-flash effort=high prompt=v1  n=90  correct 96%  wrong 4  no_answer 0  errors 0
+tool calls/question 5.5  cost/question $0.0013  median latency 7s  total $0.11
+  alias       8/8
+  diff        8/8
+  hectares    3/3
+  max_year    5/5
+  method_gap  6/6
+  multi_hop   4/4
+  no_data     4/4
+  no_scene    1/1
+  outside     4/4
+  outside_holdout 0/4
+  rainy       5/5
+  rank        3/3
+  season_pct  9/9
+  single      10/10
+  tool_failure 6/6
+  tool_failure_holdout 4/4
+  total       2/2
+  vague       4/4
+wrote eval/results_deepseek-flash_high_v1.jsonl
+deepseek-v4-pro effort=off prompt=v1  n=90  correct 97%  wrong 2  no_answer 0  errors 22
+tool calls/question 3.5  cost/question $0.0018  median latency 7s  total $0.12
+  alias       8/8
+  diff        8/8
+  max_year    5/5
+  method_gap  6/6
+  no_data     4/4
+  no_scene    1/1
+  outside     2/4
+  rainy       5/5
+  rank        3/3
+  season_pct  9/9
+  single      10/10
+  tool_failure 3/3
+  total       2/2
+wrote eval/results_deepseek-v4-pro_off_v1.jsonl
+deepseek-v4-pro effort=high prompt=v1  n=90  correct 100%  wrong 0  no_answer 0  errors 86
+tool calls/question 4.0  cost/question $0.0033  median latency 11s  total $0.01
+  diff        4/4
+wrote eval/results_deepseek-v4-pro_high_v1.jsonl
