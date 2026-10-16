@@ -13,8 +13,8 @@ import torch.nn.functional as F
 import s2
 
 # Default: Aruanã, the reach held out of training.
-DATES = sys.argv[1] if len(sys.argv) > 1 else "2026-07-01/2026-09-30"
-BBOX = [float(v) for v in sys.argv[2].split(",")] if len(sys.argv) > 2 else [-51.16, -15.00, -50.98, -14.84]
+DATES = "2026-07-01/2026-09-30"
+BBOX = [-51.16, -15.00, -50.98, -14.84]
 
 
 def predict(b, ckpt="unet.pt"):
@@ -37,9 +37,11 @@ def overlay(rgb, water, sand):
 
 
 def main():
-    items = s2.search(BBOX, DATES)
+    dates = sys.argv[1] if len(sys.argv) > 1 else DATES
+    bbox = [float(v) for v in sys.argv[2].split(",")] if len(sys.argv) > 2 else BBOX
+    items = s2.search(bbox, dates)
     item = min(items, key=lambda i: i.properties["eo:cloud_cover"])
-    b = s2.load_day(items, item, BBOX)
+    b = s2.load_day(items, item, bbox)
     water, sand = s2.baseline(b)
     pred = predict(b)
 

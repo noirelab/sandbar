@@ -6,6 +6,7 @@ Scene bands are cached in data/scenes/, so each (reach, month) is downloaded onc
 Usage: uv run tools.py   (fills the cache for every reach, July and September 2023-2026)
 """
 import calendar
+import threading
 from functools import cache
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from dataset import REACHES
 CACHE = Path("data/scenes")
 PIXEL_KM2 = 1e-4  # one 10 m x 10 m pixel
 METHODS = ("unet", "baseline")
+_gpu = threading.Lock()  # one U-Net inference at a time; also serializes the first import of predict
 
 
 def reaches():
@@ -69,7 +71,8 @@ def measure(reach, year, month, method="unet"):
     if method == "baseline":
         water, sand = s2.baseline(b)
     else:
-        pred = _model()(b)
+        with _gpu:
+            pred = _model()(b)
         water, sand = pred == 1, pred == 2
     return {
         "reach": reach,

@@ -4,7 +4,7 @@ An agent that answers questions about river drought on the Araguaia from Sentine
 
 Ask "how much riverbed was exposed at Aruanã in September 2024 compared to 2023?" and the LLM plans the measurements, calls a segmentation model on the right scenes, does the arithmetic and cites the scene dates. Exposed sand grows as the river drops, so it is a proxy for drought; 2023 and 2024 brought record droughts to the Araguaia-Tocantins basin.
 
-**Status:** data pipeline, spectral baseline, weak-label dataset, agent tools, agent and eval harness are written. The U-Net is training; the eval has not been run against the API yet.
+**Status:** data pipeline, spectral baseline, weak-label dataset, agent tools, agent and eval harness are written. The U-Net is trained (validation sand IoU 0.68 against the weak labels) and the first eval run is in (see Eval results).
 
 ## Why the eval is the point
 
@@ -16,7 +16,7 @@ What it does not measure: whether the segmentation itself is accurate. That need
 
 1. Data access and spectral baseline (done).
 2. Weak-label dataset: 256 x 256 tiles from 8 reaches over 1,000 km of the Araguaia, July and September 2023-2026, masks from the spectral rule (done).
-3. U-Net trained on the weak labels; Aruanã held out for testing, São Félix for validation (training).
+3. U-Net trained on the weak labels; Aruanã held out for testing, São Félix for validation (done; on Aruanã it finds about 25% more sand than the rule, which only hand labels can call right or wrong).
 4. Agent tools: list reaches, measure sand and water area for a reach and month with the U-Net or the rule, cached scenes (done).
 5. Agent: DeepSeek (OpenAI-compatible API) with function calling and a hand-written tool loop (done).
 6. Eval: questions generated from the measurement cache with exact answers, including unanswerable cases; reports accuracy, tool calls, cost and latency per model and effort (harness done, results pending).
@@ -49,6 +49,19 @@ Credentials: `DEEPSEEK_API_KEY`, or a file at `~/.config/deepseek/key` (`chmod 6
 uv run eval.py build                              # writes eval/questions.jsonl
 uv run eval.py run deepseek-flash high 5        # first 5 questions; writes eval/results_<model>_<effort>.jsonl
 ```
+
+### Results (2026-10-16, 47 questions, U-Net measurements)
+
+| Model | Thinking | Correct | Tool calls / question | Cost / question | Median latency |
+|---|---|---|---|---|---|
+| deepseek-flash | off | 47/47 | 3.8 | $0.0007 | 5 s |
+| deepseek-flash | high | 47/47 | 4.5 | $0.0009 | 6 s |
+| deepseek-v4-pro | off | 46/47 | 4.1 | $0.0023 | 7 s |
+| deepseek-v4-pro | high | 47/47 | 4.4 | $0.0034 | 9 s |
+
+Costs use peak-hour prices. The one miss is the most useful row: asked about Imperatriz, a city outside the study area on the Tocantins, `deepseek-v4-pro` without thinking measured the nearest reach (Xambioá) and reported it as "Imperatriz (trecho Xambioá)" instead of answering "no data".
+
+The eval is saturated: the cheapest configuration scores 100%, so this version cannot rank models beyond that. The next version needs harder cases: place names that need mapping to reaches (accents, nearby towns), months with no clear scene, tools that fail mid-run (an early bug showed an agent silently switching from the U-Net to the rule when the U-Net errored), multi-step questions over many reaches, and questions phrased like real users ask them.
 
 Question types: one measurement, difference between years, seasonal growth in percent, ranking of reaches, year with most sand, basin total, U-Net vs rule gap, and unknown places that must get "no data". Numbers pass within 1% or the case's absolute tolerance. API failures are counted apart from wrong answers.
 

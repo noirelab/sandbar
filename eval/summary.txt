@@ -1,0 +1,44 @@
+deepseek-flash effort=off  n=47  correct 100%  wrong 0  no_answer 0  errors 0
+tool calls/question 3.8  cost/question $0.0007  median latency 5s  total $0.03
+  diff        8/8
+  max_year    5/5
+  method_gap  6/6
+  no_data     4/4
+  rank        3/3
+  season_pct  9/9
+  single      10/10
+  total       2/2
+wrote eval/results_deepseek-flash_off.jsonl
+deepseek-flash effort=high  n=47  correct 100%  wrong 0  no_answer 0  errors 0
+tool calls/question 4.5  cost/question $0.0009  median latency 6s  total $0.04
+  diff        8/8
+  max_year    5/5
+  method_gap  6/6
+  no_data     4/4
+  rank        3/3
+  season_pct  9/9
+  single      10/10
+  total       2/2
+wrote eval/results_deepseek-flash_high.jsonl
+deepseek-v4-pro effort=off  n=47  correct 98%  wrong 1  no_answer 0  errors 0
+tool calls/question 4.1  cost/question $0.0023  median latency 7s  total $0.11
+  diff        8/8
+  max_year    5/5
+  method_gap  6/6
+  no_data     3/4
+  rank        3/3
+  season_pct  9/9
+  single      10/10
+  total       2/2
+wrote eval/results_deepseek-v4-pro_off.jsonl
+deepseek-v4-pro effort=high  n=47  correct 100%  wrong 0  no_answer 0  errors 0
+tool calls/question 4.4  cost/question $0.0034  median latency 9s  total $0.16
+  diff        8/8
+  max_year    5/5
+  method_gap  6/6
+  no_data     4/4
+  rank        3/3
+  season_pct  9/9
+  single      10/10
+  total       2/2
+wrote eval/results_deepseek-v4-pro_high.jsonl
